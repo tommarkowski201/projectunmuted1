@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Unmuted | Collaboration Build</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #fdfcfb; --card: #ffffff; --text: #1e293b; --secondary: #64748b;
+            --gold: #d4af37; --danger: #f43f5e; --accent: #10b981; --admin: #4f46e5;
+            --security: #0f172a; --staff-bg: #eef2ff;
+        }
+        body { margin: 0; font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; }
+        
+        /* STAFF LOUNGE STYLES */
+        .chat-bubble { padding: 10px 15px; border-radius: 15px; margin-bottom: 10px; font-size: 0.85rem; max-width: 80%; }
+        .chat-staff { background: #dbeafe; align-self: flex-start; border-bottom-left-radius: 2px; }
+        #lounge-chat { height: 300px; overflow-y: auto; display: flex; flex-direction: column; padding: 10px; background: #f1f5f9; border-radius: 12px; }
+
+        /* REPRISING PREVIOUS FEATURES */
+        #shoutout-box { background: linear-gradient(135deg, #4f46e5, #818cf8); color: white; padding: 20px; border-radius: 20px; margin-bottom: 20px; }
+        .reply-item { font-size: 0.85rem; padding: 12px; border-radius: 12px; margin-bottom: 8px; background: #f8fafc; border-left: 3px solid #e2e8f0; }
+        .reply-staff { background: var(--staff-bg); border-left: 3px solid var(--admin); }
+        
+        /* LAYOUT CORE */
+        #sos-sidebar { width: 70px; background: var(--danger); color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; position: fixed; left: 0; top: 0; bottom: 0; z-index: 5000; }
+        #app-shell { margin-left: 70px; width: calc(100% - 70px); }
+        .screen { display: none; width: 100%; padding: 30px; box-sizing: border-box; animation: fadeIn 0.3s ease; padding-bottom: 100px; }
+        .glass-card { background: var(--card); padding: 20px; border-radius: 20px; border: 1px solid #f1f5f9; box-shadow: 0 4px 15px rgba(0,0,0,0.02); margin-bottom: 20px; }
+        
+        input, textarea { width: 100%; padding: 12px; margin: 8px 0; border-radius: 12px; border: 1px solid #e2e8f0; font-family: inherit; box-sizing: border-box; }
+        button { cursor: pointer; border: none; border-radius: 12px; font-weight: 600; padding: 10px 18px; }
+        .btn-primary { background: var(--gold); color: white; width: 100%; }
+        .btn-admin { background: var(--admin); color: white; }
+        nav { position: fixed; bottom: 0; left: 70px; right: 0; background: white; padding: 15px; border-top: 1px solid #eee; display: none; justify-content: space-around; z-index: 4000; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+<div id="sos-sidebar" onclick="triggerSOS()"><div style="transform: rotate(-90deg); font-weight: 800; letter-spacing: 2px;">HELP NOW</div></div>
+
+<div id="app-shell">
+    <div id="screen-gate" class="screen" style="display: flex; justify-content: center; align-items: center; height: 100vh;">
+        <div class="glass-card" style="max-width: 350px; text-align: center; width: 100%;">
+            <h1 style="color:var(--admin)">Project Unmuted</h1>
+            <input type="number" id="loginID" placeholder="District ID" oninput="checkLogin()">
+            <div id="pass-field" style="display:none"><input type="password" id="uPass" placeholder="Password"></div>
+            <div id="setup-field" style="display:none">
+                <input type="text" id="uName" placeholder="Ghost Alias">
+                <input type="password" id="nPass" placeholder="Set Password">
+            </div>
+            <button class="btn-primary" style="margin-top:10px;" onclick="auth()">Access Portal</button>
+        </div>
+    </div>
+
+    <div id="screen-staff" class="screen">
+        <h2>Command Hub</h2>
+        <div class="glass-card" style="background:var(--staff-bg)">
+            <h3>📣 Feed Shoutout</h3>
+            <input type="text" id="shoutAlias" placeholder="Student Alias">
+            <input type="text" id="shoutMsg" placeholder="Message">
+            <button class="btn-admin" onclick="updateShoutout()">Update Shoutout</button>
+        </div>
+        <h3>🚨 Security Log</h3>
+        <div id="incident-log"></div>
+    </div>
+
+    <div id="screen-lounge" class="screen">
+        <h2>Staff Lounge</h2>
+        <p style="font-size:0.8rem; color:var(--secondary);">Private encrypted chat for District Staff only.</p>
+        <div class="glass-card">
+            <div id="lounge-chat"></div>
+            <div style="display:flex; gap:10px; margin-top:10px;">
+                <input type="text" id="chatInput" placeholder="Message fellow staff...">
+                <button class="btn-admin" onclick="sendLoungeMsg()">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="screen-feed" class="screen">
+        <div id="shoutout-box">
+            <div class="shoutout-title">District Shoutout</div>
+            <div id="shoutout-content">Welcome to Project Unmuted.</div>
+        </div>
+        <h2>Community Wall</h2>
+        <div id="global-feed"></div>
+    </div>
+
+    <div id="screen-lib" class="screen"><h2>Resource Library</h2><div id="library-list"></div></div>
+    <div id="screen-wall" class="screen"><div class="glass-card"><h3>Vent</h3><textarea id="vIn"></textarea><button class="btn-primary" onclick="handlePost('VENT')">Post</button></div></div>
+    <div id="screen-sec" class="screen"><div class="glass-card" style="border-left:10px solid var(--danger)"><h3>Security Report</h3><textarea id="sIn"></textarea><button class="btn-primary" style="background:var(--security)" onclick="handlePost('SECURITY')">Submit Report</button></div></div>
+
+    <nav id="nav-bar">
+        <button onclick="nav('feed')">Home</button>
+        <button id="nav-staff" onclick="nav('staff')" style="display:none; color:var(--admin)">Dashboard</button>
+        <button id="nav-lounge" onclick="nav('lounge')" style="display:none; color:var(--accent)">Lounge</button>
+        <button onclick="nav('lib')">Library</button>
+        <button id="nav-wall" onclick="nav('wall')">Vent</button>
+        <button id="nav-sec" onclick="nav('sec')" style="color:var(--danger)">Security</button>
+        <button onclick="location.reload()">Logout</button>
+    </nav>
+</div>
+
+<script>
+    const STAFF = { "888": "Counselor", "777": "Security Specialist" };
+    let db_u = JSON.parse(localStorage.getItem('unmuted_u_v99.7') || "{}");
+    let db_p = JSON.parse(localStorage.getItem('unmuted_p_v99.7') || "[]");
+    let db_l = JSON.parse(localStorage.getItem('unmuted_l_v99.7') || "[]");
+    let db_s = JSON.parse(localStorage.getItem('unmuted_s_v99.7') || "{\"a\":\"Admin\", \"m\":\"Welcome.\"}");
+    let db_chat = JSON.parse(localStorage.getItem('unmuted_chat_v99.7') || "[]");
+    
+    let currID = null, currRole = 'STUDENT';
+
+    function checkLogin() {
+        let id = document.getElementById('loginID').value;
+        if(db_u[id]) document.getElementById('pass-field').style.display='block';
+        else if(id.length >= 3) document.getElementById('setup-field').style.display='block';
+    }
+
+    function auth() {
+        let id = document.getElementById('loginID').value;
+        if(db_u[id]) { if(document.getElementById('uPass').value === db_u[id].p) login(id); }
+        else {
+            let n = document.getElementById('uName').value, p = document.getElementById('nPass').value;
+            db_u[id] = { p, n, moods: [], loveReceived: 0 };
+            localStorage.setItem('unmuted_u_v99.7', JSON.stringify(db_u)); login(id);
+        }
+    }
+
+    function login(id) {
+        currID = id; currRole = STAFF[id] ? 'STAFF' : 'STUDENT';
+        document.getElementById('nav-staff').style.display = currRole === 'STAFF' ? 'block' : 'none';
+        document.getElementById('nav-lounge').style.display = currRole === 'STAFF' ? 'block' : 'none';
+        document.getElementById('nav-wall').style.display = currRole === 'STUDENT' ? 'block' : 'none';
+        document.getElementById('nav-sec').style.display = currRole === 'STUDENT' ? 'block' : 'none';
+        document.getElementById('sos-sidebar').style.display = currRole === 'STUDENT' ? 'flex' : 'none';
+        proceed();
+    }
+
+    function proceed() { document.getElementById('nav-bar').style.display = 'flex'; nav(currRole === 'STAFF' ? 'staff' : 'feed'); }
+
+    function sendLoungeMsg() {
+        let input = document.getElementById('chatInput');
+        if(!input.value) return;
+        db_chat.push({ s: STAFF[currID], m: input.value, t: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) });
+        localStorage.setItem('unmuted_chat_v99.7', JSON.stringify(db_chat));
+        input.value = ""; render();
+    }
+
+    function updateShoutout() {
+        db_s = { a: document.getElementById('shoutAlias').value, m: document.getElementById('shoutMsg').value };
+        localStorage.setItem('unmuted_s_v99.7', JSON.stringify(db_s)); render();
+    }
+
+    function handlePost(type) {
+        let i = type === 'VENT' ? 'vIn' : 'sIn';
+        let text = document.getElementById(i).value;
+        db_p.unshift({ id: Date.now(), uID: "MASKED", text, type, replies: [] });
+        localStorage.setItem('unmuted_p_v99.7', JSON.stringify(db_p));
+        document.getElementById(i).value = ""; nav('feed');
+    }
+
+    function render() {
+        document.getElementById('shoutout-content').innerHTML = `<b>${db_s.a}:</b> ${db_s.m}`;
+        
+        // Render Lounge
+        document.getElementById('lounge-chat').innerHTML = db_chat.map(c => `
+            <div class="chat-bubble chat-staff">
+                <small><b>${c.s}</b> • ${c.t}</small><br>${c.m}
+            </div>
+        `).join("");
+        
+        // Render Feed
+        document.getElementById('global-feed').innerHTML = db_p.filter(p => p.type === 'VENT').map(p => `
+            <div class="glass-card"><b>@Anonymous</b><p>${p.text}</p></div>
+        `).join("");
+
+        // Render Incidents for Staff
+        if(currRole === 'STAFF') {
+            document.getElementById('incident-log').innerHTML = db_p.filter(p => p.type === 'SECURITY').map(p => `
+                <div class="glass-card" style="border-left: 5px solid var(--danger)"><b>Report:</b> ${p.text}</div>
+            `).join("");
+        }
+    }
+
+    function nav(id) { document.querySelectorAll('.screen').forEach(s => s.style.display='none'); document.getElementById('screen-'+id).style.display = 'block'; render(); }
+    function triggerSOS() { if(confirm("Trigger SOS?")) { handlePost('SECURITY'); window.location.href="tel:988"; }}
+</script>
+</body>
+</html>
